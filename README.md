@@ -3,6 +3,8 @@ Maintained by [Production City](https://github.com/productioncity)
 
 ---
 
+[![Build & Publish Saltcorn Containers](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml/badge.svg?branch=main)](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml)
+
 ## 🧪 Tested Build Matrix
 | Node Version | Saltcorn Version | Build |
 |-------------|-----------------|-------|
@@ -28,6 +30,10 @@ docker pull ghcr.io/productioncity/saltcorn:latest
 docker run -p 3000:3000 ghcr.io/productioncity/saltcorn:latest serve
 
 That is all most users will ever need.
+
+## ⚠️ Important
+
+We do not publish to docker hub. The images are freely available in the github container registry, and they don't charge you to pull them - so win win.
 
 ---
 
