@@ -1,88 +1,87 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------------
-# calc-tags.sh – Derive all OCI tags for a Saltcorn × Node permutation.
+# calc-tags.sh – Derive every OCI tag for a Saltcorn × Node permutation.
 #
-# This version:
-#   • ALWAYS emits a full semver tag (no Node suffix) whenever the build is
-#     based on the *default* Node image.
-#   • GUARANTEES that the canonical `latest` tag is produced when – and only
-#     when – the build matches BOTH the default Saltcorn *and* default Node.
+# Rules
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Always emit the fully-qualified       :<SC>-<NODE>        tag.
+# 2. If NODE = DEFAULT_NODE:
+#      • Always emit the full semver       :<SC>               tag.
+#      • If SC   = DEFAULT_SC   → add      :<MAJOR.MINOR> and :<MAJOR>,
+#        plus                                    :latest
+#      • If SC   = EDGE_SC      → add      :edge
 #
-# Usage:
+# Usage
 #   ./scripts/calc-tags.sh <NODE_TAG> <SC_VERSION> <DEFAULT_NODE> \
 #                          <DEFAULT_SC> <EDGE_SC>
 #
-# Prints one tag per line on STDOUT.  Order is deterministic but duplicates
-# (should they arise) are removed automatically.
+# Prints one tag per line (duplicates are silently removed).
 #
 # ──────────────────────────────────────────────────────────────────────────────
 # Author:  Troy Kelly <troy@team.production.city>
 # History:
 #   2025-04-30 • Initial scaffold
-#   2025-04-30 • Fix missing `latest` tag + always emit semver tag on default
+#   2025-04-30 • Fix missing semver/alias tags, remove ‘local’-outside-func bug
 #------------------------------------------------------------------------------
 
 set -euo pipefail
 
-#------------------------------------------------------------------------------
-# 1. Input validation
-#------------------------------------------------------------------------------
 if [[ "$#" -ne 5 ]]; then
   echo "Usage: $(basename "$0") <NODE_TAG> <SC_VERSION> <DEFAULT_NODE> <DEFAULT_SC> <EDGE_SC>" >&2
-  echo "Example: $(basename "$0") 23-slim 1.1.4 23-slim 1.1.4 1.2.0-beta.0" >&2
   exit 1
 fi
 
-readonly NODE_TAG="${1}"
-readonly SC_VERSION="${2}"
-readonly DEFAULT_NODE="${3}"
-readonly DEFAULT_SC="${4}"
-readonly EDGE_SC="${5}"
+readonly NODE_TAG="$1"
+readonly SC_VERSION="$2"
+readonly DEFAULT_NODE="$3"
+readonly DEFAULT_SC="$4"
+readonly EDGE_SC="$5"
 
 readonly REGISTRY="${REGISTRY:-ghcr.io}"
 readonly IMAGE_NAME="${IMAGE_NAME:-${GITHUB_REPOSITORY_OWNER:-local}/saltcorn}"
 
 #------------------------------------------------------------------------------
-# 2. Helper – append to the global TAGS array only if the value is new.
+# Helper: append_unique <tag>
 #------------------------------------------------------------------------------
 declare -a TAGS
 append_unique() {
-  local tag="$1"
+  local candidate="$1"
   for existing in "${TAGS[@]:-}"; do
-    [[ "${existing}" == "${tag}" ]] && return
+    [[ "$existing" == "$candidate" ]] && return
   done
-  TAGS+=("${tag}")
+  TAGS+=("$candidate")
 }
 
 #------------------------------------------------------------------------------
-# 3. Base tag – always include the fully-qualified Node/Saltcorn tag.
+# 1. Always present – fully-qualified Node/Saltcorn tag
 #------------------------------------------------------------------------------
 append_unique "${REGISTRY}/${IMAGE_NAME}:${SC_VERSION}-${NODE_TAG}"
 
 #------------------------------------------------------------------------------
-# 4. Default-Node specific tags (no Node suffix)
+# 2. Extras when using the default Node image
 #------------------------------------------------------------------------------
-if [[ "${NODE_TAG}" == "${DEFAULT_NODE}" ]]; then
-  # 4a. Full semver (e.g. 1.0.0).  This was missing for non-default SC versions.
+if [[ "$NODE_TAG" == "$DEFAULT_NODE" ]]; then
+  # 2a. Full semver alias (e.g. 1.0.0)
   append_unique "${REGISTRY}/${IMAGE_NAME}:${SC_VERSION}"
 
-  # 4b. Major.minor and Major aliases for *true* semver releases.
-  if [[ "${SC_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-    local major="${BASH_REMATCH[1]}"
-    local minor="${BASH_REMATCH[2]}"
-    append_unique "${REGISTRY}/${IMAGE_NAME}:${major}.${minor}"
-    append_unique "${REGISTRY}/${IMAGE_NAME}:${major}"
+  # 2b. Extra aliases ONLY for the repository-wide default Saltcorn release
+  if [[ "$SC_VERSION" == "$DEFAULT_SC" ]]; then
+    if [[ "$SC_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+      major="${BASH_REMATCH[1]}"
+      minor="${BASH_REMATCH[2]}"
+      append_unique "${REGISTRY}/${IMAGE_NAME}:${major}.${minor}"
+      append_unique "${REGISTRY}/${IMAGE_NAME}:${major}"
+    fi
+    append_unique "${REGISTRY}/${IMAGE_NAME}:latest"
   fi
 
-  # 4c. latest / edge aliases.
-  [[ "${SC_VERSION}" == "${DEFAULT_SC}" ]] && \
-    append_unique "${REGISTRY}/${IMAGE_NAME}:latest"
-
-  [[ "${SC_VERSION}" == "${EDGE_SC}" ]] && \
+  # 2c. Edge alias
+  if [[ "$SC_VERSION" == "$EDGE_SC" ]]; then
     append_unique "${REGISTRY}/${IMAGE_NAME}:edge"
+  fi
 fi
 
 #------------------------------------------------------------------------------
-# 5. Emit results – one tag per line.
+# 3. Emit
 #------------------------------------------------------------------------------
 printf '%s\n' "${TAGS[@]}"

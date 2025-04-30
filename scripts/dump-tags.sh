@@ -1,73 +1,46 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------------
-# dump-tags.sh – Human-friendly preview of ALL OCI tags the build matrix yields.
+# dump-tags.sh – Preview all tags yielded by the current build matrix.
 #
-# The script iterates over every Node × Saltcorn permutation defined in
-# `.ci/build-matrix.yml`, invokes `scripts/calc-tags.sh`, and prints the
-# results in an indented list.
+# Iterates every Node × Saltcorn permutation in `.ci/build-matrix.yml`,
+# invokes `calc-tags.sh`, and prints a readable list.
 #
-# Example output:
-#
-#   Node: 23-slim, Saltcorn: 1.1.4
-#     • ghcr.io/productioncity/saltcorn:1.1.4-23-slim
-#     • ghcr.io/productioncity/saltcorn:1.1.4
-#     • ghcr.io/productioncity/saltcorn:1.1
-#     • ghcr.io/productioncity/saltcorn:1
-#     • ghcr.io/productioncity/saltcorn:latest
-#
-# Usage:
-#   ./scripts/dump-tags.sh            # Uses default build-matrix location
-#   ./scripts/dump-tags.sh <file.yml> # Custom matrix file
-#
-# Requirements:
-#   - bash ≥ 4
-#   - yq   – https://github.com/mikefarah/yq
+# Usage
+#   ./scripts/dump-tags.sh            # default matrix file
+#   ./scripts/dump-tags.sh path.yml   # custom matrix file
 #
 # ──────────────────────────────────────────────────────────────────────────────
 # Author:  Troy Kelly <troy@team.production.city>
 # History:
 #   2025-04-30 • Initial version
+#   2025-04-30 • Tolerate updated calc-tags.sh output
 #------------------------------------------------------------------------------
 
 set -euo pipefail
 
-#------------------------------------------------------------------------------
-# 1. Resolve paths & validate prerequisites
-#------------------------------------------------------------------------------
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="${SCRIPT_DIR}/.."
 readonly MATRIX_FILE="${1:-${REPO_ROOT}/.ci/build-matrix.yml}"
 readonly CALC_SCRIPT="${SCRIPT_DIR}/calc-tags.sh"
 
 if ! command -v yq >/dev/null 2>&1; then
-  echo "❌  yq is required but not installed. Aborting." >&2
+  echo "❌  yq is required but not installed." >&2
   exit 1
 fi
+[[ -f "$MATRIX_FILE" ]] || { echo "❌  Matrix file not found: $MATRIX_FILE" >&2; exit 1; }
 
-if [[ ! -f "${MATRIX_FILE}" ]]; then
-  echo "❌  Matrix file not found: ${MATRIX_FILE}" >&2
-  exit 1
-fi
+mapfile -t NODE_VERSIONS < <(yq '.node.versions[]'     < "$MATRIX_FILE")
+mapfile -t SC_VERSIONS   < <(yq '.saltcorn.versions[]' < "$MATRIX_FILE")
 
-#------------------------------------------------------------------------------
-# 2. Load matrix data
-#------------------------------------------------------------------------------
-mapfile -t NODE_VERSIONS < <(yq '.node.versions[]'     < "${MATRIX_FILE}")
-mapfile -t SC_VERSIONS   < <(yq '.saltcorn.versions[]' < "${MATRIX_FILE}")
+DEFAULT_NODE="$(yq '.node.default'     < "$MATRIX_FILE")"
+DEFAULT_SC="$(yq '.saltcorn.default'   < "$MATRIX_FILE")"
+EDGE_SC="$(yq '.saltcorn.edge'         < "$MATRIX_FILE")"
 
-readonly DEFAULT_NODE="$(yq '.node.default'     < "${MATRIX_FILE}")"
-readonly DEFAULT_SC="$(yq '.saltcorn.default'   < "${MATRIX_FILE}")"
-readonly EDGE_SC="$(yq '.saltcorn.edge'         < "${MATRIX_FILE}")"
-
-#------------------------------------------------------------------------------
-# 3. Iterate permutations & display tags
-#------------------------------------------------------------------------------
 for node in "${NODE_VERSIONS[@]}"; do
   for sc in "${SC_VERSIONS[@]}"; do
     echo "Node: ${node}, Saltcorn: ${sc}"
-    while IFS= read -r tag; do
-      echo "  • ${tag}"
-    done < <("${CALC_SCRIPT}" "${node}" "${sc}" "${DEFAULT_NODE}" "${DEFAULT_SC}" "${EDGE_SC}")
+    "${CALC_SCRIPT}" "${node}" "${sc}" "${DEFAULT_NODE}" "${DEFAULT_SC}" "${EDGE_SC}" \
+      | sed 's/^/  • /'
     echo
   done
 done
