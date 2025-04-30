@@ -21,6 +21,7 @@
 node:
   default: "23-slim"
   versions:
+    - "18-slim"
     - "22-slim"
     - "23-slim"
 

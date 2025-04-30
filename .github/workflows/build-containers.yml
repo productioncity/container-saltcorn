@@ -83,21 +83,33 @@ jobs:
           set -euo pipefail
 
           CONFIG=".ci/build-matrix.yml"
-          default_node=$(yq '.node.default' < "$CONFIG")
+
+          default_node=$(yq '.node.default'   < "$CONFIG")
           default_sc=$(yq '.saltcorn.default' < "$CONFIG")
-          edge_sc=$(yq '.saltcorn.edge' < "$CONFIG")
+          edge_sc=$(yq '.saltcorn.edge'       < "$CONFIG")
 
-          # Build flat cross-product (Node x Saltcorn) as JSON
+          # Build the flat cross-product (Node × Saltcorn) as JSON
           matrix=$(yq -o=json '
-            [.node.versions[] as $node |
-             .saltcorn.versions[] as $sc |
-             {node: $node, saltcorn: $sc}]' "$CONFIG")
+            . as $root
+            | [ $root.node.versions[]  as $node
+                | $root.saltcorn.versions[] as $sc
+                | { "node": $node, "saltcorn": $sc } ]
+          ' "$CONFIG")
 
-          echo "default_node=$default_node"   >>"$GITHUB_OUTPUT"
-          echo "default_sc=$default_sc"       >>"$GITHUB_OUTPUT"
-          echo "edge_sc=$edge_sc"             >>"$GITHUB_OUTPUT"
-          echo "matrix=$matrix"               >>"$GITHUB_OUTPUT"
+          # ── Emit to log for human inspection ───────────────────────────────
+          echo "🔍 Generated build matrix JSON:"
+          echo "${matrix}"
 
+          # ── Expose step outputs ────────────────────────────────────────────
+          {
+            echo "default_node=${default_node}"
+            echo "default_sc=${default_sc}"
+            echo "edge_sc=${edge_sc}"
+            echo "matrix<<EOF"
+            echo "${matrix}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+  
   #─────────────────────────────────────────────────────────────────────────────
   # 2. Build & (optionally) push images for every matrix entry
   #─────────────────────────────────────────────────────────────────────────────
@@ -122,10 +134,11 @@ jobs:
         with:
           # Provenance & SBOM require BuildKit with provenance enabled
           install: true
+          provenance: true
+          sbom: true
           driver-opts: |
             env.BUILDKIT_INLINE_CACHE=1
-            feature.provenance=true
-
+  
       #── Registry login (GHCR) ───────────────────────────────────────────────
       - name: 🔐  Log-in to GHCR
         if: github.event_name != 'pull_request'

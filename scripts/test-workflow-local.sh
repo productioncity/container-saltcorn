@@ -31,7 +31,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_ROOT="${SCRIPT_DIR}/.."
 readonly DEFAULT_RUNNER_IMAGE="catthehacker/ubuntu:act-latest"
 readonly DEFAULT_EVENT="pull_request"
-readonly DUMMY_TOKEN="llm_dummy_token"
+readonly DUMMY_TOKEN="${GITHUB_TOKEN:-llm_dummy_token}"
 
 #----------------------------------------------------------------------------
 # 2. Helper: print usage information
