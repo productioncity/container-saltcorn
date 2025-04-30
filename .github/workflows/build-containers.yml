@@ -73,7 +73,7 @@ jobs:
       - name: 🛠️  Install yq
         run: |
           YQ_VERSION="v4.45.1"
-          SHA256="549f6649d50bdccdfc95a7d4b11e86869d81183436be63f9c6e4dd7f005e2142"
+          SHA256="654d2943ca1d3be2024089eb4f270f4070f491a0610481d128509b2834870049"
           wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O yq
           echo "${SHA256}  yq" | sha256sum -c -
           sudo mv yq /usr/local/bin/yq
@@ -277,7 +277,7 @@ jobs:
         run: |
           set -euo pipefail
           YQ_VERSION="v4.45.1"
-          SHA256="549f6649d50bdccdfc95a7d4b11e86869d81183436be63f9c6e4dd7f005e2142"
+          SHA256="654d2943ca1d3be2024089eb4f270f4070f491a0610481d128509b2834870049"
           wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O yq
           echo "${SHA256}  yq" | sha256sum -c -
           sudo mv yq /usr/local/bin/yq
