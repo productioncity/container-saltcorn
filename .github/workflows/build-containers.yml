@@ -9,8 +9,16 @@ name: Build & Publish Saltcorn Containers
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'containers/**'
+      - '.ci/build-matrix.yml'
+      - '.ci/build-matrix.yaml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'containers/**'
+      - '.ci/build-matrix.yml'
+      - '.ci/build-matrix.yaml'
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * 1'
@@ -163,3 +171,78 @@ jobs:
             org.label-schema.schema-version=1.0
           provenance: true
           sbom: true
+
+  #───────────────────────────────────────────────────────────────────────────
+  # 3. Post-build README update (push events only)
+  #───────────────────────────────────────────────────────────────────────────
+  update-readme:
+    name: Update README with Build Matrix
+    needs: [matrix, build]
+    if: github.event_name != 'pull_request' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🛠️  Install helper tools (yq, jq)
+        run: |
+          set -euo pipefail
+          YQ_VERSION="v4.45.1"
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: 🔄  Generate build matrix table
+        id: table
+        run: |
+          set -euo pipefail
+          CONFIG=".ci/build-matrix.yml"
+          nodes=($(yq '.node.versions[]' < "$CONFIG"))
+          scs=($(yq '.saltcorn.versions[]' < "$CONFIG"))
+          {
+            echo "| Node Version | Saltcorn Version | Build |"
+            echo "|-------------|-----------------|-------|"
+            for n in "${nodes[@]}"; do
+              for sc in "${scs[@]}"; do
+                echo "| ${n} | ${sc} | ✅ |"
+              done
+            done
+          } > build_matrix_table.md
+
+      - name: 🖊️  Insert or update table in README.md
+        run: |
+          set -euo pipefail
+          TABLE_CONTENT=$(cat build_matrix_table.md)
+          if grep -q "## 🧪 Tested Build Matrix" README.md; then
+            # Replace existing section
+            awk -v table="$TABLE_CONTENT" '
+              BEGIN {in_section=0}
+              /^## 🧪 Tested Build Matrix/ {print; print table; in_section=1; next}
+              in_section && /^## / {in_section=0}
+              !in_section {print}
+            ' README.md > README.tmp
+          else
+            # Insert new section after the first "---" delimiter
+            awk -v table="$TABLE_CONTENT" '
+              {print}
+              /^---$/ && !added {print ""; print "## 🧪 Tested Build Matrix"; print table; added=1}
+            ' README.md > README.tmp
+          fi
+          mv README.tmp README.md
+
+      - name: 📤 Commit README update
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add README.md
+            git commit -m "docs(readme): update tested build matrix table [skip ci]"
+            git push
+          else
+            echo "ℹ️  No README changes detected."
+          fi
