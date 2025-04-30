@@ -3,6 +3,22 @@ Maintained by [Production City](https://github.com/productioncity)
 
 ---
 
+## 🧪 Tested Build Matrix
+| Node Version | Saltcorn Version | Build |
+|-------------|-----------------|-------|
+| 18-slim | 1.0.0 | ✅ |
+| 18-slim | 1.1.3 | ✅ |
+| 18-slim | 1.1.4 | ✅ |
+| 18-slim | 1.2.0-beta.0 | ✅ |
+| 22-slim | 1.0.0 | ✅ |
+| 22-slim | 1.1.3 | ✅ |
+| 22-slim | 1.1.4 | ✅ |
+| 22-slim | 1.2.0-beta.0 | ✅ |
+| 23-slim | 1.0.0 | ✅ |
+| 23-slim | 1.1.3 | ✅ |
+| 23-slim | 1.1.4 | ✅ |
+| 23-slim | 1.2.0-beta.0 | ✅ |
+
 ## 🏃‍♂️ TL;DR — Just Need Saltcorn?
 
 # Pull the latest stable Saltcorn image (Saltcorn 1.1.4 on Node 23-slim)
