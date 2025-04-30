@@ -3,6 +3,24 @@ Maintained by [Production City](https://github.com/productioncity)
 
 ---
 
+[![Build & Publish Saltcorn Containers](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml/badge.svg?branch=main)](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml)
+
+## 🧪 Tested Build Matrix
+| Node Version | Saltcorn Version | Build |
+|-------------|-----------------|-------|
+| 18-slim | 1.0.0 | ✅ |
+| 18-slim | 1.1.3 | ✅ |
+| 18-slim | 1.1.4 | ✅ |
+| 18-slim | 1.2.0-beta.0 | ✅ |
+| 22-slim | 1.0.0 | ✅ |
+| 22-slim | 1.1.3 | ✅ |
+| 22-slim | 1.1.4 | ✅ |
+| 22-slim | 1.2.0-beta.0 | ✅ |
+| 23-slim | 1.0.0 | ✅ |
+| 23-slim | 1.1.3 | ✅ |
+| 23-slim | 1.1.4 | ✅ |
+| 23-slim | 1.2.0-beta.0 | ✅ |
+
 ## 🏃‍♂️ TL;DR — Just Need Saltcorn?
 
 # Pull the latest stable Saltcorn image (Saltcorn 1.1.4 on Node 23-slim)
@@ -12,6 +30,10 @@ docker pull ghcr.io/productioncity/saltcorn:latest
 docker run -p 3000:3000 ghcr.io/productioncity/saltcorn:latest serve
 
 That is all most users will ever need.
+
+## ⚠️ Important
+
+We do not publish to docker hub. The images are freely available in the github container registry, and they don't charge you to pull them - so win win.
 
 ---
 

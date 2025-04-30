@@ -289,14 +289,17 @@ jobs:
         run: |
           set -euo pipefail
           CONFIG=".ci/build-matrix.yml"
+          REGISTRY="${REGISTRY:-ghcr.io}"
+          IMAGE_NAME="${IMAGE_NAME:-${GITHUB_REPOSITORY_OWNER}/saltcorn}"
           nodes=($(yq '.node.versions[]' < "$CONFIG"))
           scs=($(yq '.saltcorn.versions[]' < "$CONFIG"))
           {
-            echo "| Node Version | Saltcorn Version | Build |"
-            echo "|-------------|-----------------|-------|"
+            echo "| Node Version | Saltcorn Version | Docker Pull | Build |"
+            echo "|-------------|-----------------|-------------|-------|"
             for n in "${nodes[@]}"; do
               for sc in "${scs[@]}"; do
-                echo "| ${n} | ${sc} | ✅ |"
+                tag="${sc}-${n}"
+                echo "| ${n} | ${sc} | \`docker pull ${REGISTRY}/${IMAGE_NAME}:${tag}\` | ✅ |"
               done
             done
           } > build_matrix_table.md
