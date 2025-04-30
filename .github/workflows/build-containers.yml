@@ -14,9 +14,6 @@
 #------------------------------------------------------------------------------
 
 name: Build, Sign & Publish Saltcorn Containers
-description: >
-  CI pipeline that builds, cosign-signs and publishes multi-arch Saltcorn
-  images for every Node/Saltcorn version combination.
 
 on:
   push:
@@ -139,8 +136,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           install: true
-          provenance: true
-          sbom: true
           driver-opts: env.BUILDKIT_INLINE_CACHE=1
 
       #─────────────────────────────────────────────────────────────────────────
