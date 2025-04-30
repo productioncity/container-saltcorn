@@ -242,7 +242,7 @@ jobs:
           set -euo pipefail
           digest="${{ steps.docker_build.outputs.digest }}"
           echo "🔎  Verifying signatures"
-          identity="https://github.com/${{ github.repository }}/.github/workflows/build-containers.yml@${{ github.sha }}"
+          identity="https://github.com/${{ github.repository }}/.github/workflows/build-containers.yml@${{ github.ref }}"
           issuer="https://token.actions.githubusercontent.com"
           while read -r tag; do
             echo "   • ${tag}"
