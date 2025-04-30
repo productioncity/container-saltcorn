@@ -180,6 +180,8 @@ jobs:
           file: containers/Dockerfile.saltcorn
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha,scope=${{ matrix.node }}-${{ matrix.saltcorn }}
+          cache-to:   type=gha,mode=max,scope=${{ matrix.node }}-${{ matrix.saltcorn }}
           tags: ${{ steps.tags.outputs.list }}
           build-args: |
             NODE_BASE=${{ matrix.node }}
