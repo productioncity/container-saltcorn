@@ -194,7 +194,7 @@ jobs:
           set -euo pipefail
           YQ_VERSION="v4.45.1"
           sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq scripts/calc-tags.sh
+          sudo chmod +x /usr/local/bin/yq 
 
       - name: 🔄  Generate build matrix table
         id: table
