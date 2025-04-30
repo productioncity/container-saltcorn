@@ -1,14 +1,7 @@
 #------------------------------------------------------------------------------
 # GitHub Actions Workflow – Build & Publish Saltcorn OCI Images
 #
-# Behaviour is driven entirely by `.ci/build-matrix.yml`; edit that file to
-# add/remove Node or Saltcorn versions.
-#
-# ──────────────────────────────────────────────────────────────────────────────
-# Author:  Troy Kelly <troy@team.production.city>
-# History:
-#   2025-04-30 • Initial scaffold
-#   2025-04-30 • “act” compatibility – emit single-line matrix JSON
+# All version data lives in `.ci/build-matrix.yml`.
 #------------------------------------------------------------------------------
 
 name: Build & Publish Saltcorn Containers
@@ -20,7 +13,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * 1'   # 02:00 UTC every Monday – weekly rebuild
+    - cron: '0 2 * * 1'
 
 permissions:
   contents: read
@@ -32,30 +25,30 @@ env:
 
 jobs:
 
-  #─────────────────────────────────────────────────────────────────────────────
-  # 1. Matrix generation – read YAML & output JSON build matrix
-  #─────────────────────────────────────────────────────────────────────────────
+  #───────────────────────────────────────────────────────────────────────────
+  # 1. Read .ci/build-matrix.yml and expose arrays + defaults
+  #───────────────────────────────────────────────────────────────────────────
   matrix:
     name: Generate build matrix
     runs-on: ubuntu-latest
 
     outputs:
-      matrix:        ${{ steps.generate.outputs.matrix }}
-      default_node:  ${{ steps.generate.outputs.default_node }}
-      default_sc:    ${{ steps.generate.outputs.default_sc }}
-      edge_sc:       ${{ steps.generate.outputs.edge_sc }}
+      nodes:        ${{ steps.generate.outputs.nodes }}
+      saltcorns:    ${{ steps.generate.outputs.saltcorns }}
+      default_node: ${{ steps.generate.outputs.default_node }}
+      default_sc:   ${{ steps.generate.outputs.default_sc }}
+      edge_sc:      ${{ steps.generate.outputs.edge_sc }}
 
     steps:
-      - name: ⤵️  Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🛠️  Install yq (Go-based, mikefarah/yq)
+      - name: 🛠️  Install yq
         run: |
           YQ_VERSION="v4.45.1"
           sudo wget -q https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
 
-      - name: 🔄  Generate matrix JSON & expose defaults
+      - name: 🔄  Parse YAML & emit outputs
         id: generate
         shell: bash
         run: |
@@ -66,44 +59,44 @@ jobs:
           default_sc=$(yq '.saltcorn.default' < "$CONFIG")
           edge_sc=$(yq '.saltcorn.edge'       < "$CONFIG")
 
-          # Build flat cross-product (Node × Saltcorn) then compact to one line
-          matrix_json=$(yq -o=json '
-            . as $root
-            | [ $root.node.versions[] as $node
-              | $root.saltcorn.versions[] as $sc
-              | { "node": $node, "saltcorn": $sc } ]
-          ' "$CONFIG" | jq -c '.')
+          nodes_json=$(yq -o=json '.node.versions'     "$CONFIG" | jq -c '.')
+          sc_json=$(yq    -o=json '.saltcorn.versions' "$CONFIG" | jq -c '.')
 
-          echo "🔍 Generated build matrix:"
-          echo "${matrix_json}" | jq '.'
+          echo "📝 Node  versions : $nodes_json"
+          echo "📝 Saltcorn vers. : $sc_json"
 
           {
             echo "default_node=${default_node}"
             echo "default_sc=${default_sc}"
             echo "edge_sc=${edge_sc}"
-            echo "matrix=${matrix_json}"
+            echo "nodes<<EOF"
+            echo "$nodes_json"
+            echo "EOF"
+            echo "saltcorns<<EOF"
+            echo "$sc_json"
+            echo "EOF"
           } >>"$GITHUB_OUTPUT"
 
-  #─────────────────────────────────────────────────────────────────────────────
-  # 2. Build & (optionally) push images for every matrix entry
-  #─────────────────────────────────────────────────────────────────────────────
+  #───────────────────────────────────────────────────────────────────────────
+  # 2. Build & (optionally) push image for every Node × Saltcorn combo
+  #───────────────────────────────────────────────────────────────────────────
   build:
-    name: Build & Push – ${{ matrix.node }} / ${{ matrix.saltcorn }}
+    name: Build & Push                # static: keeps `act` happy
     needs: matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
+      matrix:
+        node:      ${{ fromJson(needs.matrix.outputs.nodes) }}
+        saltcorn:  ${{ fromJson(needs.matrix.outputs.saltcorns) }}
 
     steps:
-      - name: ⤵️  Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      #── Docker buildx & QEMU for multi-arch support ─────────────────────────
-      - name: 🏗️  Set-up QEMU (cross-arch emulation)
+      - name: 🏗️  Set-up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: 🏗️  Set-up Docker Buildx
+      - name: 🏗️  Set-up Buildx
         uses: docker/setup-buildx-action@v3
         with:
           install: true
@@ -111,7 +104,6 @@ jobs:
           sbom: true
           driver-opts: env.BUILDKIT_INLINE_CACHE=1
 
-      #── Registry login (GHCR) ───────────────────────────────────────────────
       - name: 🔐  Log-in to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -120,52 +112,26 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      #── Record build timestamp for OCI label ───────────────────────────────
-      - name: ℹ️  Capture build timestamp
+      - name: ℹ️  Timestamp label
         id: meta
         run: echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$GITHUB_OUTPUT"
 
-      #── Generate full tag list for this permutation ─────────────────────────
+      #── Tag derivation (unchanged) ─────────────────────────────────────────
       - name: 🏷️  Calculate tags
         id: tags
-        shell: bash
-        env:
-          NODE_TAG:     ${{ matrix.node }}
-          SC_VERSION:   ${{ matrix.saltcorn }}
-          DEFAULT_NODE: ${{ needs.matrix.outputs.default_node }}
-          DEFAULT_SC:   ${{ needs.matrix.outputs.default_sc }}
-          EDGE_SC:      ${{ needs.matrix.outputs.edge_sc }}
-          REGISTRY:     ${{ env.REGISTRY }}
-          IMAGE_NAME:   ${{ env.IMAGE_NAME }}
         run: |
           set -euo pipefail
-          declare -a TAGS
+          list=$(./scripts/calc-tags.sh \
+            "${{ matrix.node }}" \
+            "${{ matrix.saltcorn }}" \
+            "${{ needs.matrix.outputs.default_node }}" \
+            "${{ needs.matrix.outputs.default_sc }}" \
+            "${{ needs.matrix.outputs.edge_sc }}")
+          printf '%s\n' "$list"
+          { echo 'list<<EOF'; printf '%s\n' "$list"; echo 'EOF'; } >>"$GITHUB_OUTPUT"
 
-          # Base tag (always present) – includes explicit Node variant
-          TAGS+=("${REGISTRY}/${IMAGE_NAME}:${SC_VERSION}-${NODE_TAG}")
-
-          # Extra tags only on the *default* Node base
-          if [[ "${NODE_TAG}" == "${DEFAULT_NODE}" ]]; then
-            TAGS+=("${REGISTRY}/${IMAGE_NAME}:${SC_VERSION}")
-
-            # SemVer truncations for stable releases
-            if [[ "${SC_VERSION}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-              major="${BASH_REMATCH[1]}"
-              minor="${BASH_REMATCH[2]}"
-              TAGS+=("${REGISTRY}/${IMAGE_NAME}:${major}.${minor}")
-              TAGS+=("${REGISTRY}/${IMAGE_NAME}:${major}")
-            fi
-
-            [[ "${SC_VERSION}" == "${DEFAULT_SC}" ]] && TAGS+=("${REGISTRY}/${IMAGE_NAME}:latest")
-            [[ "${SC_VERSION}" == "${EDGE_SC}"    ]] && TAGS+=("${REGISTRY}/${IMAGE_NAME}:edge")
-          fi
-
-          printf '%s\n' "${TAGS[@]}"
-
-          { echo 'list<<EOF'; printf '%s\n' "${TAGS[@]}"; echo 'EOF'; } >>"$GITHUB_OUTPUT"
-
-      #── Build & (optionally) push image ─────────────────────────────────────
-      - name: 🐳  Build (and push if applicable)
+      #── Build / push ───────────────────────────────────────────────────────
+      - name: 🐳  Build image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -190,7 +156,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.ref.name=${{ github.ref }}
             org.opencontainers.image.base.name=node:${{ matrix.node }}
-            # Legacy label-schema duplicates
+            # Legacy label-schema
             org.label-schema.name=Saltcorn
             org.label-schema.vcs-url=https://github.com/${{ github.repository }}
             org.label-schema.vcs-ref=${{ github.sha }}
