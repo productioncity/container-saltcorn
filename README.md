@@ -1,9 +1,57 @@
-# Saltcorn Container Images – Production-ready, Always Up-to-date  
-Maintained by [Production City](https://github.com/productioncity)
+# Saltcorn Containers — Opinionated, Signed & Ready-to-Run
+An initiative by [Production&nbsp;City™](https://github.com/productioncity)
+
+[![Build & Publish Saltcorn Containers](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml/badge.svg?branch=main)](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml)
 
 ---
 
-[![Build & Publish Saltcorn Containers](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml/badge.svg?branch=main)](https://github.com/productioncity/container-saltcorn/actions/workflows/build-containers.yml)
+## 🥑 What is Saltcorn?
+[Saltcorn](https://saltcorn.com/) is a brilliant open-source **low-code / no-code platform** that lets anyone build web applications without writing traditional backend code.
+Source code lives at <https://github.com/saltcorn/saltcorn>.
+
+> **We are _not_ the Saltcorn project.**
+> This repository merely provides an _opinionated_, security-focused container packaging of Saltcorn for the community.
+
+---
+
+## 🏃‍♀️ TL;DR – I Just Want to Run Saltcorn
+
+# Pull the latest stable Saltcorn image (Saltcorn 1.1.4 on Node 23-slim)
+docker pull ghcr.io/productioncity/saltcorn:latest
+
+# Start it up (default web UI on port 3000)
+docker run -p 3000:3000 ghcr.io/productioncity/saltcorn:latest serve
+
+That’s it. No database? No worries – Saltcorn starts with SQLite by default.
+
+---
+
+## 🏗️ Key Differences to the Official Image
+
+| Aspect                       | Official Saltcorn | `productioncity/saltcorn` (this repo) |
+|------------------------------|-------------------|---------------------------------------|
+| Base image                   | `node:X`          | **`node:X-slim`** (smaller, safer)    |
+| Dependency layout            | Flat `node_modules` | **Nested install-strategy** so plugins work seamlessly |
+| Multi-arch builds            | `amd64`           | **`amd64` & `arm64`** (Apple Silicon, Graviton) |
+| Image signing                | None              | **Sigstore cosign** key-less signing |
+| SBOM / provenance            | None              | **Built-in SBOM** + OCI provenance |
+| Tag strategy                 | Partial           | **Full semantic versioning** inc. aliases (`latest`, `edge`, `1.1`, …) |
+| Rebuild cadence              | Ad-hoc            | **Weekly & on-push** automated rebuilds |
+
+If these opinions suit you – welcome aboard!
+
+---
+
+## 📦 Supported Architectures
+
+All images are built and pushed for:
+
+* `linux/amd64` (x86-64 servers, traditional cloud builders)
+* `linux/arm64` (Apple Silicon, Raspberry Pi 4/5, AWS Graviton, Ampere A1)
+
+Docker/Podman will auto-select the correct variant for your host.
+
+---
 
 ## 🧪 Tested Build Matrix
 | Node Version | Saltcorn Version | Docker Pull | Build |
@@ -20,151 +68,134 @@ Maintained by [Production City](https://github.com/productioncity)
 | 23-slim | 1.1.3 | `docker pull ghcr.io/productioncity/saltcorn:1.1.3-23-slim` | ✅ |
 | 23-slim | 1.1.4 | `docker pull ghcr.io/productioncity/saltcorn:1.1.4-23-slim` | ✅ |
 | 23-slim | 1.2.0-beta.0 | `docker pull ghcr.io/productioncity/saltcorn:1.2.0-beta.0-23-slim` | ✅ |
-## 🏃‍♂️ TL;DR — Just Need Saltcorn?
-
-# Pull the latest stable Saltcorn image (Saltcorn 1.1.4 on Node 23-slim)
-docker pull ghcr.io/productioncity/saltcorn:latest
-
-# Spin it up (default port 3000):
-docker run -p 3000:3000 ghcr.io/productioncity/saltcorn:latest serve
-
-That is all most users will ever need.
-
-## ⚠️ Important
-
-We do not publish to docker hub. The images are freely available in the github container registry, and they don't charge you to pull them - so win win.
+<!--  ✨  This whole section above is auto-managed by CI – do not edit by hand. -->
 
 ---
 
-## 📦 What You Get
+## 📑 Tag Cheat-Sheet
 
-* **Battle-tested, minimal images** built from official Node Slim bases.
-* **Published exclusively to GitHub Container Registry (GHCR)**:  
-  `ghcr.io/productioncity/saltcorn`
-* **Full semantic versioning** that encodes both the Saltcorn and Node base
-  versions.
-* **Automated weekly rebuilds** plus on-push triggers to ensure patches and
-  CVE-fixes land quickly.
-* **Rich OCI labels** for traceability and SBOM tooling.
-
----
-
-## 🔖 Supported Tags
-
-| Tag Example | Meaning |
-|-------------|---------|
-| `1.1.4-23-slim` | Saltcorn 1.1.4 on Node 23-slim |
-| `1.1.4` | Saltcorn 1.1.4 on the **default** Node base (currently 23-slim) |
-| `1.1` | Latest 1.1 x patch release on default Node base |
-| `1` | Latest 1 x minor release on default Node base |
-| `latest` | Alias for the default Saltcorn release (1.1.4) on the default Node base |
-| `edge` | Alias for the bleeding-edge Saltcorn (1.2.0-beta.0) on the default Node base |
-
-> The exact values are driven by `.ci/build-matrix.yml`; update that file in a
-> pull request to alter what is built.
+| Tag | Means | Example |
+|-----|-------|---------|
+| `1.1.4-23-slim` | Explicit Saltcorn _and_ Node base | `docker pull …:1.1.4-23-slim` |
+| `1.1.4` | Saltcorn 1.1.4 on **default Node base** | `docker pull …:1.1.4` |
+| `1.1`   | Latest `1.1.x` on default Node base | `docker pull …:1.1` |
+| `1`     | Latest `1.x`   on default Node base | `docker pull …:1` |
+| `latest` | Current stable Saltcorn release | `docker pull …:latest` |
+| `edge`   | Bleeding-edge pre-release         | `docker pull …:edge` |
 
 ---
 
-## 🎨 Image Labelling
+## 📦 Container Repositories
 
-Every image is annotated with the following OCI/Label-Schema metadata:
+We do not publish to the Docker container repository (Docker Hub). That won't change. Please don't submit a PR or feature request to add this.
 
-| Label | Populated With |
-|-------|----------------|
-| `org.opencontainers.image.title` | `Saltcorn` |
-| `org.opencontainers.image.description` | Concise purpose statement |
-| `org.opencontainers.image.version` | Full Saltcorn version (e.g. `1.1.4`) |
-| `org.opencontainers.image.url` | `https://saltcorn.com/` |
-| `org.opencontainers.image.source` | `https://github.com/productioncity/saltcorn-large-language-model` |
-| `org.opencontainers.image.licenses` | `MIT` (Saltcorn licence) |
-| `org.opencontainers.image.created` | ISO-8601 build timestamp |
-| `org.opencontainers.image.authors` | `Troy Kelly <troy@team.production.city>` |
-| `org.opencontainers.image.vendor` | `Production City` |
-| `org.opencontainers.image.documentation` | GitHub README permalink |
-| `org.opencontainers.image.revision` | Git commit SHA used for the build |
-| `org.opencontainers.image.ref.name` | Git tag/branch name |
-| `org.opencontainers.image.base.name` | e.g. `node:23-slim` |
-| `org.label-schema.*` | Duplicate key data for legacy tooling |
-
-Labels are injected by the GitHub Actions workflow at build time; no manual
-intervention required.
+As soon as Docker stops limiting pulls for open source containers - we can revisit that decision.
 
 ---
 
-## 🛠️ Repository Layout
+## 🛠️ Runtime Basics & Environment Tweaks
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `NODE_ENV`            | Node environment              | `production` |
+| `SALTCORN_DISABLE_UPGRADE` | Skip in-app upgrade nags | `true` |
+| `PUID` / `PGID`       | Map container user to host UID/GID for file permissions | `1000` |
+| `SALTCORN_FILE_STORE` | Put uploaded files somewhere specific | unset = inside container |
+
+PostgreSQL users can set `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, `PGPASSWORD` and the entry-point will patiently wait for the server to become reachable before starting Saltcorn.
+
+---
+
+## 🤔 Why Another Saltcorn Image?
+
+1. **Slim Base, Faster Deploys** – Built on node-slim
+2. **Aggressive Regular Rebuilds** – weekly schedule catches Debian & Node CVEs quickly.
+3. **Tamper-evident Supply Chain** – Sigstore signing + BuildKit provenance baked-in.
+4. **Multi-arch** – perfect for Apple M-series laptops.
+
+---
+
+## 🔍 Repository Tour
 
 ```text
 .
-├── .ci/
-│   └── build-matrix.yml     # Single source of truth for version matrix
-├── .github/workflows/
-│   └── build-containers.yml # CI/CD pipeline
-├── containers/
-│   └── Dockerfile.saltcorn  # Production Dockerfile
-├── scripts/
-│   └── build-local.sh       # Local build helper (no push)
-├── Makefile                 # `make build` convenience wrapper
-└── README.md                # You are here
+├── .ci/build-matrix.yml   # Single source-of-truth for versions
+├── .github/workflows/     # Build, sign & publish pipelines
+├── containers/            # Production Dockerfile & entry-point
+├── scripts/               # Local helper utilities (build, test, etc.)
+└── README.md              # You are here
 ```
 
-### Key Design Choices
-
-* **Matrix-driven builds** — A YAML file, not hard-coded workflow, decides what
-  gets built. Updates are reviewable and auditable.
-* **Node Slim bases** — Small attack surface and faster cold-starts.
-* **Nested npm install strategy** — Saltcorn’s plugin loader expects
-  per-package `node_modules` layout; we replicate this faithfully.
-* **Least-privilege runtime** — Images default to the unprivileged `node`
-  user. Environment variables `PUID`/`PGID` allow UID/GID remapping.
+*Everything else is plumbing to keep the process reproducible and auditable.*
 
 ---
 
-## 🤓 For Contributors
+## 🧑‍💻 Hacking on the Containers
 
-1. **Fork & clone** the repo.
-2. **Edit `.ci/build-matrix.yml`** to add/update Node or Saltcorn versions.
-3. **Commit & open a PR**.  
-   The CI will run the matrix job but skip pushing images on PRs for safety.
-4. **Once merged**, a full build + publish round kicks off automatically.
+### 1. Clone & Prepare
 
-### Local smoke tests
+git clone https://github.com/productioncity/container-saltcorn.git
+cd container-saltcorn
+touch .env                # must exist – even an empty file works
+echo "GITHUB_TOKEN=ghp_xxx" >> .env   # optional but enables GitHub API calls
 
-# Requires Docker/Podman and yq
+### 2. Coding in VS Code Dev Container
+
+With the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed:
+
+1. **Re-open in Container** (from the command palette).
+2. The predefined **`.devcontainer/`** spins up a full toolchain: Docker-in-Docker, GitHub CLI, `act`, `yq`, `jq`, etc.
+
+### 3. Local Smoke Tests
+
+# Enumerate (and later build) every image defined in the matrix
 make build
 
-This enumerates the same matrix the CI would build, printing intended actions.
-The actual `docker build` commands will be fleshed out in future sessions.
+# Run the full unit-test suite
+make test
+
+# Replay the entire GitHub Actions workflow with “act”
+make workflow-build       # quickest – runs the build job only
 
 ---
 
-## 🤖 CI/CD Workflow Details
+## 🔄 Regenerating the Build Matrix Yourself
 
-The GitHub Actions pipeline performs three stages:
+The YAML file lists exactly **which** Saltcorn and Node permutations to build.
+To add a new Saltcorn version:
 
-1. **Matrix generation** (`matrix` job)  
-   Reads `.ci/build-matrix.yml` with `yq`, outputs JSON to be consumed by…
-2. **Build & Push** (`build` job)  
-   For each matrix entry, build the image, tag it according to the rules, push
-   to GHCR, and sign it with provenance labels.
-3. **Scheduled rebuilds**  
-   Runs every Monday 02:00 UTC to pick up upstream base image patches.
+1. Edit `.ci/build-matrix.yml` → add your desired version under `saltcorn: versions:`.
+2. Commit & push – the CI will build PR images but _not_ publish them.
+3. Merge and the main‐branch build will push, sign & verify everything.
 
-All workflow code lives in
-`.github/workflows/build-containers.yml` and is intentionally
-comment-heavy for maintainability.
+Want it more automated? Run:
+
+make matrix       # rewrites .ci/build-matrix.yml in-place
+
+Under the hood this calls `scripts/update_build_matrix.py`, which queries the upstream Saltcorn repo, selects the latest _n_ releases by policy and updates the file.
+
+---
+
+## 🙋‍♀️ Contributing
+
+Pull-requests are warmly welcomed. Please:
+
+1. Create meaningful commits & PR descriptions.
+2. English is preferred (but we can use translate if you can't).
+3. Make sure `make test` is green.
+4. Don’t commit secrets – the `.env` file is intentionally git-ignored.
 
 ---
 
 ## 📜 Licence
 
-* Container build scripts and workflow files: **MIT**
-* Saltcorn itself: see upstream licence at <https://github.com/saltcorn/saltcorn>
+* Container build assets and workflow code: **MIT** (© Troy Kelly, Production City™)
+* Saltcorn itself: see upstream licence at <https://github.com/saltcorn/saltcorn/blob/main/LICENSE>
 
 ---
 
-## 🙏 Acknowledgements
+## 🙌 Acknowledgements
 
-Saltcorn is an outstanding open-source low-code platform.  
-This repository merely provides a predictable container wrapper around it.
-
-Pull requests, issues and suggestions are most welcome.
+Huge thanks to the Saltcorn maintainers – they created an amazing platform.
+We merely wrap it in what we think is the nicest possible Container parcel.
+Enjoy, and happy building!
