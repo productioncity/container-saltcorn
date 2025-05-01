@@ -1,38 +1,18 @@
-#------------------------------------------------------------------------------
-# Build Matrix Configuration for Saltcorn Container Images
-#
-# This YAML file is the single source-of-truth for the GitHub Actions workflow
-# and the local build tooling.  It defines:
-#
-# • Which Node.js base image tags Saltcorn will be built upon.
-# • Which base tag is considered the “default” (used when no base tag suffix
-#   is supplied and for multi-tagging).
-# • Which Saltcorn releases will be built, and which release represents the
-#   “latest” and “edge” tags.
-#
-# The structure has been deliberately kept flat and explicit to allow simple,
-# POSIX-compatible tooling (bash/yq/jq) to consume it without bespoke parsing
-# logic.
-#
-# ──────────────────────────────────────────────────────────────────────────────
-# Author:  Troy Kelly <troy@team.production.city>
-# History: 2025-04-30 • Initial scaffold
-#------------------------------------------------------------------------------
 node:
-  default: "23-slim"
+  default: 23-slim
   versions:
-    - "18-slim"
-    - "22-slim"
-    - "23-slim"
-
+  - 18-slim
+  - 22-slim
+  - 23-slim
 saltcorn:
-  default: "1.1.4"     # newest stable - becomes the `latest` tag
-  edge: "1.2.0-beta.0" # bleeding-edge tag
+  default: 1.1.4
+  edge: 1.2.0-beta.0
   versions:
-    - "1.0.0"
-    - "1.1.3"
-    - "1.1.4"
-    - "1.2.0-beta.0"
+  - 1.0.0
+  - 1.1.0
+  - 1.1.3
+  - 1.1.4
+  - 1.2.0-beta.0
   ignored_versions:
   - 1.1.1
   - 1.1.2
