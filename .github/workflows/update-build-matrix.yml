@@ -24,7 +24,8 @@
 # Author : Troy Kelly <troy@team.production.city>
 # History:
 #   2025-05-01 • Initial implementation
-#   2025-05-02 • Fix workflow failure: avoid self-approval by scoping PAT usage
+#   2025-05-02 • Fix: avoid self-approval by scoping PAT usage
+#   2025-05-02 • Fix: provide GH_TOKEN for gh CLI in PR-creation step
 #------------------------------------------------------------------------------
 
 name: Refresh Build Matrix
@@ -139,11 +140,13 @@ jobs:
 
       #------------------------------------------------------------------#
       # 5. Create or update the Pull Request
-      #     (uses default GITHUB_TOKEN → author = github-actions[bot])
+      #     (uses default GITHUB_TOKEN via GH_TOKEN)
       #------------------------------------------------------------------#
       - name: 📨  Create / update Pull Request
         if: steps.check.outputs.changed == 'true'
         id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
