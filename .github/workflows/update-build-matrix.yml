@@ -76,13 +76,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # ──────────────────────────────────────────────────────────────
+          # Temporarily disable “exit-on-error” so we can inspect rc=2
+          # ──────────────────────────────────────────────────────────────
+          set +e
           python scripts/update_build_matrix.py --dry-run
-          status=$?
-          if [[ $status -eq 2 ]]; then
-            echo "changed=true"  >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          rc=$?
+          set -e     # re-enable fail-fast for the rest of the script
+          # --------------------------------------------------------------
+
+          case "$rc" in
+            0)  echo "changed=false" >> "$GITHUB_OUTPUT" ;;
+            2)  echo "changed=true"  >> "$GITHUB_OUTPUT" ;;
+            *)  echo "❌ update_build_matrix.py failed (rc=${rc})" >&2
+                exit "$rc"
+                ;;
+          esac
 
       # Early-exit path when no work is required
       - name: ✅  Matrix already up-to-date - nothing to do
