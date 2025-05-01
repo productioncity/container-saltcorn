@@ -50,7 +50,7 @@ jobs:
     # Environment variables shared across all steps
     env:
       PYTHON_VERSION: '3.12'
-      # Stored PAT used only for push/approve/merge – NOT exported as GH_TOKEN
+      # Stored PAT used only for push/approve/merge - NOT exported as GH_TOKEN
       PAT_ACTIONS: ${{ secrets.PAT_ACTIONS }}
 
     steps:
@@ -96,9 +96,9 @@ jobs:
                 ;;
           esac
 
-      - name: ✅ Matrix already up-to-date – nothing to do
+      - name: ✅ Matrix already up-to-date - nothing to do
         if: steps.check.outputs.changed == 'false'
-        run: echo "Exiting – no changes required."
+        run: echo "Exiting - no changes required."
 
       #---------------------------------------------------------------------#
       # 3. Apply the update & commit to a dedicated branch
@@ -111,10 +111,10 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         id: commit
         env:
-          GIT_AUTHOR_NAME: github-actions[bot]
-          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions[bot]
-          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_AUTHOR_NAME: matrix-bot
+          GIT_AUTHOR_EMAIL: matrix-bot@users.noreply.github.com
+          GIT_COMMITTER_NAME: matrix-bot
+          GIT_COMMITTER_EMAIL: matrix-bot@users.noreply.github.com
         shell: bash
         run: |
           set -euo pipefail
@@ -173,7 +173,7 @@ jobs:
           echo "number=${number}" >>"$GITHUB_OUTPUT"
 
       #---------------------------------------------------------------------#
-      # 6. Approve the PR (requires PAT – reviewer ≠ author)
+      # 6. Approve the PR (requires PAT - reviewer ≠ author)
       #---------------------------------------------------------------------#
       - name: ✔️ Approve Pull Request
         if: steps.check.outputs.changed == 'true'
