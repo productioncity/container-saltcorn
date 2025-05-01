@@ -3,14 +3,14 @@
 #
 # Purpose
 #   • Executes `scripts/update_build_matrix.py` once a week (and on-demand).
-#   • If the script reports that `.ci/build-matrix.yml` needs updating:
-#       1.  Commit the regenerated file on a dedicated, unique branch.
-#       2.  Push the branch to the origin.
-#       3.  Open (or re-open) a Pull-Request with a detailed description.
-#       4.  Approve the PR using the personal-access token in PAT_ACTIONS.
-#       5.  Enable GitHub’s native Auto-Merge (merge-commit, delete branch).
+#   • When the script detects that `.ci/build-matrix.yml` requires changes:
+#       1. Commit the regenerated file on a dedicated, unique branch.
+#       2. Push the branch to the origin.
+#       3. Open (or re-open) a Pull-Request with a detailed description.
+#       4. Approve the PR using the personal-access token stored in PAT_ACTIONS.
+#       5. Enable GitHub’s native Auto-Merge (merge-commit, delete branch).
 #
-#   No further steps are taken when the matrix is already up-to-date.
+#   No further steps occur when the matrix is already up-to-date.
 #
 # Notes
 #   • Only first-party/core actions are used; all other logic is scripted.
@@ -22,14 +22,18 @@
 # Author : Troy Kelly <troy@team.production.city>
 # History:
 #   2025-05-01 • Initial implementation
+#   2025-05-01 • Fix: remove unsupported “--json/--jq” flags from
+#                   “gh pr create” (compatibility with older GitHub CLI)
 #------------------------------------------------------------------------------
 
 name: Refresh Build Matrix
 
 on:
-  schedule:               # every Monday @ 03:15 UTC
+  # Weekly at 03:15 UTC every Monday
+  schedule:
     - cron: '15 3 * * 1'
-  workflow_dispatch:      # manual trigger
+  # Manual button in the Actions UI
+  workflow_dispatch:
 
 # Repository-wide default permissions.
 permissions:
@@ -40,73 +44,73 @@ jobs:
   update-matrix:
     name: Update build-matrix file & raise PR
     runs-on: ubuntu-latest
+
+    # Environment variables shared across all steps
     env:
       PYTHON_VERSION: '3.12'
-      # The PAT is **only** required for the GitHub CLI; we keep the default
-      # GITHUB_TOKEN for all git pushes.  No escalated permissions are granted
-      # to the job itself.
+      # This PAT is **only** required for the GitHub CLI; the default
+      # GITHUB_TOKEN is sufficient for ordinary Git operations.
       GH_TOKEN: ${{ secrets.PAT_ACTIONS }}
+
     steps:
       #---------------------------------------------------------------------#
-      # 0. Checkout repository
+      # 0. Checkout the repository
       #---------------------------------------------------------------------#
-      - name: 📥  Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch all history so `gh` can resolve branch/PR relationships.
+          # Fetch full history so `gh` can resolve branch/PR relationships.
           fetch-depth: 0
 
       #---------------------------------------------------------------------#
       # 1. Prepare Python runtime (PyYAML is required by the script)
       #---------------------------------------------------------------------#
-      - name: 🐍  Set-up Python ${{ env.PYTHON_VERSION }}
+      - name: 🐍 Set-up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: 📦  Install script runtime dependencies
+      - name: 📦 Install script runtime dependencies
         run: |
           pip install --upgrade --quiet pyyaml
 
       #---------------------------------------------------------------------#
       # 2. Dry-run the matrix-update script to detect pending changes
       #---------------------------------------------------------------------#
-      - name: 🔍  Evaluate whether the matrix needs updating (dry-run)
+      - name: 🔍 Evaluate whether the matrix needs updating (dry-run)
         id: check
         shell: bash
         run: |
           set -euo pipefail
 
-          # ──────────────────────────────────────────────────────────────
           # Temporarily disable “exit-on-error” so we can inspect rc=2
-          # ──────────────────────────────────────────────────────────────
           set +e
           python scripts/update_build_matrix.py --dry-run
           rc=$?
-          set -e     # re-enable fail-fast for the rest of the script
-          # --------------------------------------------------------------
+          set -e   # re-enable fail-fast for the rest of the script
 
           case "$rc" in
-            0)  echo "changed=false" >> "$GITHUB_OUTPUT" ;;
-            2)  echo "changed=true"  >> "$GITHUB_OUTPUT" ;;
-            *)  echo "❌ update_build_matrix.py failed (rc=${rc})" >&2
+            0)  echo "changed=false" >>"$GITHUB_OUTPUT" ;;
+            2)  echo "changed=true"  >>"$GITHUB_OUTPUT" ;;
+            *)  echo "❌  update_build_matrix.py failed (rc=${rc})" >&2
                 exit "$rc"
                 ;;
           esac
 
       # Early-exit path when no work is required
-      - name: ✅  Matrix already up-to-date - nothing to do
+      - name: ✅ Matrix already up-to-date - nothing to do
         if: steps.check.outputs.changed == 'false'
         run: echo "Exiting - no changes required."
 
       #---------------------------------------------------------------------#
-      # 3. Apply the update & create a dedicated branch
+      # 3. Apply the update & commit to a dedicated branch
       #---------------------------------------------------------------------#
-      - name: 🛠️   Regenerate matrix file
+      - name: 🛠️ Regenerate matrix file
         if: steps.check.outputs.changed == 'true'
-        run: python scripts/update_build_matrix.py
+        run: |
+          python scripts/update_build_matrix.py
 
-      - name: 🗃️   Commit & push changes to new branch
+      - name: 🗃️ Commit & push changes to new branch
         if: steps.check.outputs.changed == 'true'
         id: commit
         env:
@@ -122,12 +126,12 @@ jobs:
           git add .ci/build-matrix.yml
           git commit -m "ci(matrix): refresh build matrix automatically"
           git push --set-upstream origin "$branch"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >>"$GITHUB_OUTPUT"
 
       #---------------------------------------------------------------------#
       # 4. Install GitHub CLI (official Debian package)
       #---------------------------------------------------------------------#
-      - name: 🧰  Install GitHub CLI
+      - name: 🧰 Install GitHub CLI
         if: steps.check.outputs.changed == 'true'
         run: |
           set -euo pipefail
@@ -137,15 +141,17 @@ jobs:
       #---------------------------------------------------------------------#
       # 5. Open or update the Pull-Request
       #---------------------------------------------------------------------#
-      - name: 📨  Create / update Pull-Request
+      - name: 📨 Create / update Pull Request
         if: steps.check.outputs.changed == 'true'
         id: pr
         shell: bash
         run: |
           set -euo pipefail
+
           branch="${{ steps.commit.outputs.branch }}"
           title="ci: Refresh Saltcorn build matrix ($(date -u +%Y-%m-%d))"
 
+          # The body uses a here-document to preserve formatting.
           body=$(cat <<'EOF'
           ## 🤖 Automated Build-Matrix Refresh
 
@@ -155,11 +161,11 @@ jobs:
 
           **Key points**
 
-          | Key | Value |
-          |-----|-------|
-          | Script | `scripts/update_build_matrix.py` |
-          | Trigger | Weekly schedule (Monday 03:15 UTC) or on-demand |
-          | Included changes | `saltcorn.versions`, `saltcorn.default`, `saltcorn.edge` |
+          | Key            | Value                                                                     |
+          |----------------|---------------------------------------------------------------------------|
+          | Script         | `scripts/update_build_matrix.py`                                          |
+          | Trigger        | Weekly schedule (Monday 03:15 UTC) or on-demand                           |
+          | Included parts | `saltcorn.versions`, `saltcorn.default`, `saltcorn.edge`                  |
 
           The PR is **auto-approved and set to auto-merge** once all required
           status checks pass.  
@@ -167,28 +173,35 @@ jobs:
           EOF
           )
 
-          # Check whether a PR for this branch already exists (retry scenario)
-          if gh pr view "$branch" --json number >/dev/null 2>&1; then
-            number=$(gh pr view "$branch" --json number --jq .number)
-            echo "PR #$number already exists - updating body & title."
-            gh pr edit "$number" --title "$title" --body "$body"
+          # ──────────────────────────────────────────────────────────────
+          # Determine whether a PR for this branch already exists.
+          # We purposefully avoid the “--json/--jq” flags on
+          # “gh pr create” for maximum compatibility with older CLI builds.
+          # ──────────────────────────────────────────────────────────────
+          if gh pr view "$branch" >/dev/null 2>&1; then
+            number=$(gh pr view "$branch" --template '{{.number}}')
+            echo "PR #${number} already exists - updating title and body."
+            gh pr edit "${number}" --title "$title" --body "$body"
           else
-            number=$(gh pr create \
+            gh pr create \
               --base main \
               --head "$branch" \
               --title "$title" \
               --body "$body" \
-              --label "automation,build-matrix" \
-              --json number --jq .number)
-            echo "Opened PR #$number"
+              --label "automation,build-matrix"
+
+            # Retrieve the numeric identifier in a CLI-version-safe way.
+            number=$(gh pr view "$branch" --template '{{.number}}')
+            echo "Opened PR #${number}"
           fi
 
-          echo "number=$number" >> "$GITHUB_OUTPUT"
+          # Expose the PR number to downstream steps
+          echo "number=${number}" >>"$GITHUB_OUTPUT"
 
       #---------------------------------------------------------------------#
       # 6. Approve the PR (required for branch-protection)
       #---------------------------------------------------------------------#
-      - name: ✔️  Approve Pull-Request
+      - name: ✔️ Approve Pull Request
         if: steps.check.outputs.changed == 'true'
         run: |
           gh pr review "${{ steps.pr.outputs.number }}" \
@@ -196,14 +209,14 @@ jobs:
             --body "Automated approval by CI workflow - see workflow logs for details."
 
       #---------------------------------------------------------------------#
-      # 7. Enable GitHub’s native Auto-Merge (merge commit, delete branch)
-      #    This will **block** until all required checks have succeeded.
+      # 7. Enable GitHub’s native Auto-Merge (merge commit, delete branch).
+      #    This step will **block** until all required checks succeed.
       #---------------------------------------------------------------------#
-      - name: 🔀  Enable auto-merge
+      - name: 🔀 Enable auto-merge
         if: steps.check.outputs.changed == 'true'
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" \
             --auto \
-            --merge           \
-            --delete-branch    \
-            --squash=false     # use a full merge-commit for provenance
+            --merge \
+            --delete-branch \
+            --squash=false    # Use a full merge-commit for provenance.
