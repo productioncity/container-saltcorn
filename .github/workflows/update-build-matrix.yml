@@ -173,7 +173,7 @@ jobs:
           echo "number=${number}" >>"$GITHUB_OUTPUT"
 
       #---------------------------------------------------------------------#
-      # 6. Approve the PR (requires PAT - reviewer ≠ author)
+      # 6. Approve the PR (requires PAT – reviewer ≠ author)
       #---------------------------------------------------------------------#
       - name: ✔️ Approve Pull Request
         if: steps.check.outputs.changed == 'true'
