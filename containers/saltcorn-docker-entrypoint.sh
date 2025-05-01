@@ -26,6 +26,9 @@ for cmd in $SALT_COMMANDS; do
 done
 
 if [ "$IS_SALTCORN_CMD" -eq 1 ]; then
+  mkdir -p /tmp/node
+  chmod 1777 /tmp
+  chown -R node:node /tmp/node
   if [ -n "${SALTCORN_FILE_STORE:-}" ]; then
     if [ -d "$SALTCORN_FILE_STORE" ]; then
       CURRENT_OWNER=$(stat -c '%U' "$SALTCORN_FILE_STORE" 2>/dev/null || echo "")
