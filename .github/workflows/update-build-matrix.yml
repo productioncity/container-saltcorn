@@ -29,7 +29,7 @@
 name: Refresh Build Matrix
 
 on:
-  # Weekly at At 23:05 UTC every Monday
+  # Weekly at 23:05 UTC every Monday
   schedule:
     - cron: '5 23 * * 1'
   # Manual button in the Actions UI
