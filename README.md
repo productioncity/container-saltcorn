@@ -93,6 +93,7 @@ intervention required.
 
 ## 🛠️ Repository Layout
 
+```text
 .
 ├── .ci/
 │   └── build-matrix.yml     # Single source of truth for version matrix
@@ -104,6 +105,7 @@ intervention required.
 │   └── build-local.sh       # Local build helper (no push)
 ├── Makefile                 # `make build` convenience wrapper
 └── README.md                # You are here
+```
 
 ### Key Design Choices
 
