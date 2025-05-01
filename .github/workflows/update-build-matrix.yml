@@ -185,17 +185,7 @@ jobs:
             --body "Automated approval by CI workflow."
 
       #---------------------------------------------------------------------#
-      # 7. Wait for all status checks (container-build workflow et al)
-      #---------------------------------------------------------------------#
-      - name: ⏳ Wait for status checks
-        if: steps.check.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr checks "${{ steps.pr.outputs.number }}" --watch --interval 60
-
-      #---------------------------------------------------------------------#
-      # 8. Enable auto-merge (merge-commit; branch deleted)
+      # 7. Enable auto-merge (merge-commit; branch deleted)
       #---------------------------------------------------------------------#
       - name: 🔀 Enable auto-merge
         if: steps.check.outputs.changed == 'true'
@@ -203,6 +193,7 @@ jobs:
           GH_TOKEN: ${{ env.PAT_ACTIONS }}
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" \
+            --auto \
             --merge \
             --delete-branch \
-            --squash=false    # keep full merge commit for provenance
+            --squash=false   # keep real merge commit
