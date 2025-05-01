@@ -57,21 +57,20 @@ Docker/Podman will auto-select the correct variant for your host.
 | Node Version | Saltcorn Version | Docker Pull | Build |
 |-------------|-----------------|-------------|-------|
 | 18-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-18-slim` | ✅ |
+| 18-slim | 1.1.0 | `docker pull ghcr.io/productioncity/saltcorn:1.1.0-18-slim` | ✅ |
 | 18-slim | 1.1.3 | `docker pull ghcr.io/productioncity/saltcorn:1.1.3-18-slim` | ✅ |
 | 18-slim | 1.1.4 | `docker pull ghcr.io/productioncity/saltcorn:1.1.4-18-slim` | ✅ |
 | 18-slim | 1.2.0-beta.0 | `docker pull ghcr.io/productioncity/saltcorn:1.2.0-beta.0-18-slim` | ✅ |
 | 22-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-22-slim` | ✅ |
+| 22-slim | 1.1.0 | `docker pull ghcr.io/productioncity/saltcorn:1.1.0-22-slim` | ✅ |
 | 22-slim | 1.1.3 | `docker pull ghcr.io/productioncity/saltcorn:1.1.3-22-slim` | ✅ |
 | 22-slim | 1.1.4 | `docker pull ghcr.io/productioncity/saltcorn:1.1.4-22-slim` | ✅ |
 | 22-slim | 1.2.0-beta.0 | `docker pull ghcr.io/productioncity/saltcorn:1.2.0-beta.0-22-slim` | ✅ |
 | 23-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-23-slim` | ✅ |
+| 23-slim | 1.1.0 | `docker pull ghcr.io/productioncity/saltcorn:1.1.0-23-slim` | ✅ |
 | 23-slim | 1.1.3 | `docker pull ghcr.io/productioncity/saltcorn:1.1.3-23-slim` | ✅ |
 | 23-slim | 1.1.4 | `docker pull ghcr.io/productioncity/saltcorn:1.1.4-23-slim` | ✅ |
 | 23-slim | 1.2.0-beta.0 | `docker pull ghcr.io/productioncity/saltcorn:1.2.0-beta.0-23-slim` | ✅ |
-<!--  ✨  This whole section above is auto-managed by CI – do not edit by hand. -->
-
----
-
 ## 📑 Tag Cheat-Sheet
 
 | Tag | Means | Example |
