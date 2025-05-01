@@ -7,8 +7,10 @@
 #       1. Commit the regenerated file on a dedicated, unique branch.
 #       2. Push the branch to the origin **using PAT_ACTIONS** (so that the
 #          subsequent container-build workflow is NOT suppressed).
-#       3. Open (or re-open) a Pull-Request with a detailed description.
-#       4. Approve the PR using the personal-access token stored in PAT_ACTIONS.
+#       3. Open (or re-open) a Pull-Request with a detailed description
+#          (author = PAT_ACTIONS user, not github-actions[bot]).
+#       4. Approve the PR with the default `GITHUB_TOKEN`
+#          (reviewer ≠ author → satisfies no-self-approval rule).
 #       5. WAIT until all required status checks succeed.
 #       6. Enable GitHub’s native Auto-Merge (merge-commit, delete branch).
 #
@@ -16,7 +18,7 @@
 #   • Only first-party/core actions are used; all other logic is scripted.
 #   • Approval/merge operations are authenticated via PAT_ACTIONS so they
 #     satisfy branch-protection rules, yet the PR itself is authored by the
-#     default `github-actions[bot]` identity, avoiding the “self-approval” ban.
+#     PAT user, avoiding the “self-approval” ban.
 #
 # ──────────────────────────────────────────────────────────────────────────────
 # Author : Troy Kelly <troy@team.production.city>
@@ -26,6 +28,7 @@
 #                   “gh pr create” (compatibility with older GitHub CLI)
 #   2025-05-02 • Scope PAT usage to avoid self-approval failure
 #   2025-05-03 • Push branch with PAT + wait for status checks before merge
+#   2025-05-04 • Swap tokens: PR authored by PAT, approval by GITHUB_TOKEN
 #------------------------------------------------------------------------------
 
 name: Refresh Build Matrix
@@ -54,18 +57,18 @@ jobs:
       PAT_ACTIONS: ${{ secrets.PAT_ACTIONS }}
 
     steps:
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 0. Checkout the repository
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           # Fetch full history so `gh` can resolve branch/PR relationships.
           fetch-depth: 0
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 1. Prepare Python runtime (PyYAML is required by the script)
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 🐍 Set-up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -74,9 +77,9 @@ jobs:
       - name: 📦 Install script runtime dependencies
         run: pip install --upgrade --quiet pyyaml
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 2. Dry-run the matrix-update script to detect pending changes
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 🔍 Evaluate whether the matrix needs updating (dry-run)
         id: check
         shell: bash
@@ -100,9 +103,9 @@ jobs:
         if: steps.check.outputs.changed == 'false'
         run: echo "Exiting - no changes required."
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 3. Apply the update & commit to a dedicated branch
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 🛠️ Regenerate matrix file
         if: steps.check.outputs.changed == 'true'
         run: python scripts/update_build_matrix.py
@@ -129,23 +132,24 @@ jobs:
           git push --set-upstream origin "$branch"
           echo "branch=$branch" >>"$GITHUB_OUTPUT"
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 4. Install GitHub CLI (official Debian package)
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 🧰 Install GitHub CLI
         if: steps.check.outputs.changed == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y gh
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 5. Open or update the Pull-Request
-      #---------------------------------------------------------------------#
+      #    (Author = PAT user → workflows allowed on PR events)
+      #-------------------------------------------------------------------#
       - name: 📨 Create / update Pull Request
         if: steps.check.outputs.changed == 'true'
         id: pr
         env:
-          GH_TOKEN: ${{ github.token }}   # author = github-actions[bot]
+          GH_TOKEN: ${{ env.PAT_ACTIONS }}   # ⬅️ PAT opens/updates PR
         shell: bash
         run: |
           set -euo pipefail
@@ -172,21 +176,21 @@ jobs:
           fi
           echo "number=${number}" >>"$GITHUB_OUTPUT"
 
-      #---------------------------------------------------------------------#
-      # 6. Approve the PR (requires PAT – reviewer ≠ author)
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
+      # 6. Approve the PR (reviewer = github-actions[bot] ≠ author)
+      #-------------------------------------------------------------------#
       - name: ✔️ Approve Pull Request
         if: steps.check.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ env.PAT_ACTIONS }}
+          GH_TOKEN: ${{ github.token }}      # ⬅️ approval via default token
         run: |
           gh pr review "${{ steps.pr.outputs.number }}" \
             --approve \
             --body "Automated approval by CI workflow."
 
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       # 7. Enable auto-merge (merge-commit; branch deleted)
-      #---------------------------------------------------------------------#
+      #-------------------------------------------------------------------#
       - name: 🔀 Enable auto-merge
         if: steps.check.outputs.changed == 'true'
         env:
