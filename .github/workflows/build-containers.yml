@@ -29,7 +29,7 @@ on:
       - '.ci/build-matrix.yml'
       - '.ci/build-matrix.yaml'
   workflow_dispatch:
-  # Weekly at At 00:05 UTC every Tuesday
+  # Weekly at 00:05 UTC every Tuesday
   schedule:
     - cron: '5 00 * * 2'
 
