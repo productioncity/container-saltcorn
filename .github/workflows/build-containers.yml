@@ -29,8 +29,9 @@ on:
       - '.ci/build-matrix.yml'
       - '.ci/build-matrix.yaml'
   workflow_dispatch:
+  # Weekly at 00:05 UTC every Tuesday
   schedule:
-    - cron: '0 2 * * 1'
+    - cron: '5 00 * * 2'
 
 #------------------------------------------------------------------------------
 #  Repository-wide default permissions.
