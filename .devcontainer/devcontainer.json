@@ -51,6 +51,9 @@
 			"plugins": "ssh-agent npm",
 			"omzPlugins": "https://github.com/zsh-users/zsh-autosuggestions",
 			"username": "vscode"
+		},
+		"ghcr.io/eitsupi/devcontainer-features/jq-likes:2": {
+			"version": "latest"
 		}
 	},
 	// Features to add to the dev container. More info: https://containers.dev/features.
@@ -58,7 +61,7 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "sudo mkdir -p /home/vscode/.ssh /home/vscode/.local/lib /home/vscode/.local/bin && sudo chown -R $(id -u):$(id -g) /home/vscode/.ssh /home/vscode/.local/lib /home/vscode/.local/bin && pip install --user openai && curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash",
+	"postCreateCommand": "sudo mkdir -p /home/vscode/.ssh /home/vscode/.local/lib /home/vscode/.local/bin && sudo chown -R $(id -u):$(id -g) /home/vscode/.ssh /home/vscode/.local/lib /home/vscode/.local/bin && pip install --user openai pyyaml pytest && curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash",
 	"customizations": {
 		"vscode": {
 			"extensions": [

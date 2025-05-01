@@ -1,0 +1,199 @@
+#------------------------------------------------------------------------------
+# GitHub Actions Workflow - Automated Build-Matrix Refresh
+#
+# Purpose
+#   • Executes `scripts/update_build_matrix.py` once a week (and on-demand).
+#   • If the script reports that `.ci/build-matrix.yml` needs updating:
+#       1.  Commit the regenerated file on a dedicated, unique branch.
+#       2.  Push the branch to the origin.
+#       3.  Open (or re-open) a Pull-Request with a detailed description.
+#       4.  Approve the PR using the personal-access token in PAT_ACTIONS.
+#       5.  Enable GitHub’s native Auto-Merge (merge-commit, delete branch).
+#
+#   No further steps are taken when the matrix is already up-to-date.
+#
+# Notes
+#   • Only first-party/core actions are used; all other logic is scripted.
+#   • The workflow runs with write permission to both *contents* and
+#     *pull-requests* scopes; approval/merge operations are authenticated via
+#     PAT_ACTIONS so they satisfy branch-protection rules.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# Author : Troy Kelly <troy@team.production.city>
+# History:
+#   2025-05-01 • Initial implementation
+#------------------------------------------------------------------------------
+
+name: Refresh Build Matrix
+
+on:
+  schedule:               # every Monday @ 03:15 UTC
+    - cron: '15 3 * * 1'
+  workflow_dispatch:      # manual trigger
+
+# Repository-wide default permissions.
+permissions:
+  contents: write         # commit + push
+  pull-requests: write    # open / approve / merge PRs
+
+jobs:
+  update-matrix:
+    name: Update build-matrix file & raise PR
+    runs-on: ubuntu-latest
+    env:
+      PYTHON_VERSION: '3.12'
+      # The PAT is **only** required for the GitHub CLI; we keep the default
+      # GITHUB_TOKEN for all git pushes.  No escalated permissions are granted
+      # to the job itself.
+      GH_TOKEN: ${{ secrets.PAT_ACTIONS }}
+    steps:
+      #---------------------------------------------------------------------#
+      # 0. Checkout repository
+      #---------------------------------------------------------------------#
+      - name: 📥  Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history so `gh` can resolve branch/PR relationships.
+          fetch-depth: 0
+
+      #---------------------------------------------------------------------#
+      # 1. Prepare Python runtime (PyYAML is required by the script)
+      #---------------------------------------------------------------------#
+      - name: 🐍  Set-up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 📦  Install script runtime dependencies
+        run: |
+          pip install --upgrade --quiet pyyaml
+
+      #---------------------------------------------------------------------#
+      # 2. Dry-run the matrix-update script to detect pending changes
+      #---------------------------------------------------------------------#
+      - name: 🔍  Evaluate whether the matrix needs updating (dry-run)
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/update_build_matrix.py --dry-run
+          status=$?
+          if [[ $status -eq 2 ]]; then
+            echo "changed=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Early-exit path when no work is required
+      - name: ✅  Matrix already up-to-date - nothing to do
+        if: steps.check.outputs.changed == 'false'
+        run: echo "Exiting - no changes required."
+
+      #---------------------------------------------------------------------#
+      # 3. Apply the update & create a dedicated branch
+      #---------------------------------------------------------------------#
+      - name: 🛠️   Regenerate matrix file
+        if: steps.check.outputs.changed == 'true'
+        run: python scripts/update_build_matrix.py
+
+      - name: 🗃️   Commit & push changes to new branch
+        if: steps.check.outputs.changed == 'true'
+        id: commit
+        env:
+          GIT_AUTHOR_NAME:  github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME:  ${{ env.GIT_AUTHOR_NAME }}
+          GIT_COMMITTER_EMAIL: ${{ env.GIT_AUTHOR_EMAIL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="ci/update-build-matrix-$(date -u +%Y%m%d%H%M%S)"
+          git switch -c "$branch"
+          git add .ci/build-matrix.yml
+          git commit -m "ci(matrix): refresh build matrix automatically"
+          git push --set-upstream origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      #---------------------------------------------------------------------#
+      # 4. Install GitHub CLI (official Debian package)
+      #---------------------------------------------------------------------#
+      - name: 🧰  Install GitHub CLI
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y gh
+
+      #---------------------------------------------------------------------#
+      # 5. Open or update the Pull-Request
+      #---------------------------------------------------------------------#
+      - name: 📨  Create / update Pull-Request
+        if: steps.check.outputs.changed == 'true'
+        id: pr
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="${{ steps.commit.outputs.branch }}"
+          title="ci: Refresh Saltcorn build matrix ($(date -u +%Y-%m-%d))"
+
+          body=$(cat <<'EOF'
+          ## 🤖 Automated Build-Matrix Refresh
+
+          This pull-request was generated automatically by the **Refresh Build Matrix**
+          workflow. It updates `.ci/build-matrix.yml` to ensure the container build
+          pipeline tracks the most recent Saltcorn releases, as per repository policy.
+
+          **Key points**
+
+          | Key | Value |
+          |-----|-------|
+          | Script | `scripts/update_build_matrix.py` |
+          | Trigger | Weekly schedule (Monday 03:15 UTC) or on-demand |
+          | Included changes | `saltcorn.versions`, `saltcorn.default`, `saltcorn.edge` |
+
+          The PR is **auto-approved and set to auto-merge** once all required
+          status checks pass.  
+          No human intervention should be necessary.
+          EOF
+          )
+
+          # Check whether a PR for this branch already exists (retry scenario)
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            number=$(gh pr view "$branch" --json number --jq .number)
+            echo "PR #$number already exists - updating body & title."
+            gh pr edit "$number" --title "$title" --body "$body"
+          else
+            number=$(gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "$title" \
+              --body "$body" \
+              --label "automation,build-matrix" \
+              --json number --jq .number)
+            echo "Opened PR #$number"
+          fi
+
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      #---------------------------------------------------------------------#
+      # 6. Approve the PR (required for branch-protection)
+      #---------------------------------------------------------------------#
+      - name: ✔️  Approve Pull-Request
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          gh pr review "${{ steps.pr.outputs.number }}" \
+            --approve \
+            --body "Automated approval by CI workflow - see workflow logs for details."
+
+      #---------------------------------------------------------------------#
+      # 7. Enable GitHub’s native Auto-Merge (merge commit, delete branch)
+      #    This will **block** until all required checks have succeeded.
+      #---------------------------------------------------------------------#
+      - name: 🔀  Enable auto-merge
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" \
+            --auto \
+            --merge           \
+            --delete-branch    \
+            --squash=false     # use a full merge-commit for provenance

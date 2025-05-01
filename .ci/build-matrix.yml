@@ -26,10 +26,15 @@ node:
     - "23-slim"
 
 saltcorn:
-  default: "1.1.4"     # newest stable – becomes the `latest` tag
+  default: "1.1.4"     # newest stable - becomes the `latest` tag
   edge: "1.2.0-beta.0" # bleeding-edge tag
   versions:
     - "1.0.0"
     - "1.1.3"
     - "1.1.4"
     - "1.2.0-beta.0"
+  ignored_versions:
+  - 1.1.1
+  - 1.1.2
+  required_versions:
+  - 1.0.0
