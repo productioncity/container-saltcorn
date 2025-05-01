@@ -175,11 +175,10 @@ jobs:
 
           # ──────────────────────────────────────────────────────────────
           # Determine whether a PR for this branch already exists.
-          # We purposefully avoid the “--json/--jq” flags on
-          # “gh pr create” for maximum compatibility with older CLI builds.
+          # Use --json/--jq so we remain compatible with all gh versions.
           # ──────────────────────────────────────────────────────────────
           if gh pr view "$branch" >/dev/null 2>&1; then
-            number=$(gh pr view "$branch" --template '{{.number}}')
+            number=$(gh pr view "$branch" --json number --jq '.number')
             echo "PR #${number} already exists - updating title and body."
             gh pr edit "${number}" --title "$title" --body "$body"
           else
@@ -191,7 +190,7 @@ jobs:
               --label "automation,build-matrix"
 
             # Retrieve the numeric identifier in a CLI-version-safe way.
-            number=$(gh pr view "$branch" --template '{{.number}}')
+            number=$(gh pr view "$branch" --json number --jq '.number')
             echo "Opened PR #${number}"
           fi
 
