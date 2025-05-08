@@ -16,13 +16,10 @@ Source code lives at <https://github.com/saltcorn/saltcorn>.
 
 ## 🏃‍♀️ TL;DR – I Just Want to Run Saltcorn
 
-Saltcorn needs PostgreSQL – full stop.  
 Below are two ways to get going:
 
 1. **Step-by-step, with a persistent database volume** – ideal for serious local tinkering.  
 2. **One-liner “copy-pasta” demo** – everything disappears the moment you hit <kbd>Ctrl-C</kbd>.
-
----
 
 ### 1️⃣ Step-by-step (keeps your data)
 
@@ -61,8 +58,6 @@ docker rm   saltcorn saltcorn-postgres
 docker volume rm saltcorn-pgdata
 docker network rm saltcorn-net
 ```
-
----
 
 ### 2️⃣ Super-quick demo (everything is **ephemeral** – no volume, `--rm` everywhere)
 
