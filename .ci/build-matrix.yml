@@ -1,5 +1,5 @@
 node:
-  default: 24-slim
+  default: 23-slim
   versions:
     - 20-slim
     - 22-slim
