@@ -60,6 +60,7 @@ docker run -d \
   -e PGDATABASE=saltcorn \
   -e PGUSER=saltcorn \
   -e PGPASSWORD=secretpassword \
+  -e SALTCORN_SESSION_SECRET=notsecure \
   -p 3000:3000 \
   ghcr.io/productioncity/saltcorn:latest serve
 
@@ -100,8 +101,10 @@ docker run --rm -it \
   -e PGDATABASE=saltcorn \
   -e PGUSER=saltcorn \
   -e PGPASSWORD=secretpassword \
+  -e SALTCORN_SESSION_SECRET=notsecure \
   -p 3000:3000 \
   ghcr.io/productioncity/saltcorn:latest serve && \
+docker stop saltcorn-pg && \
 docker network rm saltcorn-net
 ```
 
