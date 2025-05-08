@@ -16,7 +16,7 @@ Source code lives at <https://github.com/saltcorn/saltcorn>.
 
 ## 🏃‍♀️ TL;DR – I Just Want to Run Saltcorn
 
-Below are two ways to get going:
+Below are two ways to get going **with the database pre-seeded** using Saltcorn’s sample SQL (`docker-entrypoint-initdb.sql`).
 
 1. **Step-by-step, with a persistent database volume** – ideal for serious local tinkering.  
 2. **One-liner “copy-pasta” demo** – everything disappears the moment you hit <kbd>Ctrl-C</kbd>.
@@ -38,7 +38,13 @@ docker run -d \
   -p 5432:5432 \
   postgres:17-alpine
 
-# 3. Fire up Saltcorn and point it at the database.
+# 3. Wait until Postgres is ready, then seed it with Saltcorn’s schema & data.
+docker exec saltcorn-postgres bash -c \
+  'until pg_isready -U saltcorn >/dev/null 2>&1; do sleep 1; done && \
+   curl -sSL https://raw.githubusercontent.com/saltcorn/saltcorn/refs/heads/master/deploy/examples/test/docker-entrypoint-initdb.sql \
+   | psql -U saltcorn -d saltcorn'
+
+# 4. Fire up Saltcorn and point it at the database.
 docker run -d \
   --name saltcorn \
   --network saltcorn-net \
@@ -50,9 +56,9 @@ docker run -d \
   -p 3000:3000 \
   ghcr.io/productioncity/saltcorn:latest serve
 
-# 4. Visit http://localhost:3000 in your browser.
+# 5. Visit http://localhost:3000 in your browser.
 
-# 5. Clean up when you’re done (containers + volume + network).
+# 6. Clean up when you’re done (containers + volume + network).
 docker stop saltcorn saltcorn-postgres
 docker rm   saltcorn saltcorn-postgres
 docker volume rm saltcorn-pgdata
@@ -63,7 +69,7 @@ docker network rm saltcorn-net
 
 ```bash
 # ⚠️  Demo only – ALL data vanishes on exit
-docker network create saltcorn-net && \
+docker network create saltcorn-net; \
 docker run --rm -d \
   --name saltcorn-pg \
   --network saltcorn-net \
@@ -72,6 +78,9 @@ docker run --rm -d \
   -e POSTGRES_PASSWORD=secretpassword \
   -p 5432:5432 \
   postgres:17-alpine && \
+until docker exec saltcorn-pg pg_isready -U saltcorn >/dev/null 2>&1; do sleep 1; done && \
+curl -sSL https://raw.githubusercontent.com/saltcorn/saltcorn/refs/heads/master/deploy/examples/test/docker-entrypoint-initdb.sql \
+| docker exec -i saltcorn-pg psql -U saltcorn -d saltcorn && \
 docker run --rm -it \
   --name saltcorn \
   --network saltcorn-net \
