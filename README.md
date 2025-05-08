@@ -16,13 +16,81 @@ Source code lives at <https://github.com/saltcorn/saltcorn>.
 
 ## 🏃‍♀️ TL;DR – I Just Want to Run Saltcorn
 
-# Pull the latest stable Saltcorn image (Saltcorn 1.1.4 on Node 23-slim)
-docker pull ghcr.io/productioncity/saltcorn:latest
+Saltcorn needs PostgreSQL – full stop.  
+Below are two ways to get going:
 
-# Start it up (default web UI on port 3000)
-docker run -p 3000:3000 ghcr.io/productioncity/saltcorn:latest serve
+1. **Step-by-step, with a persistent database volume** – ideal for serious local tinkering.  
+2. **One-liner “copy-pasta” demo** – everything disappears the moment you hit <kbd>Ctrl-C</kbd>.
 
-That’s it. No database? No worries – Saltcorn starts with SQLite by default.
+---
+
+### 1️⃣ Step-by-step (keeps your data)
+
+```bash
+# 1. Create a private Docker network so the containers can talk.
+docker network create saltcorn-net
+
+# 2. Start PostgreSQL with a named volume for durable storage.
+docker run -d \
+  --name saltcorn-postgres \
+  --network saltcorn-net \
+  -v saltcorn-pgdata:/var/lib/postgresql/data \
+  -e POSTGRES_DB=saltcorn \
+  -e POSTGRES_USER=saltcorn \
+  -e POSTGRES_PASSWORD=secretpassword \
+  -p 5432:5432 \
+  postgres:17-alpine
+
+# 3. Fire up Saltcorn and point it at the database.
+docker run -d \
+  --name saltcorn \
+  --network saltcorn-net \
+  -e PGHOST=saltcorn-postgres \
+  -e PGPORT=5432 \
+  -e PGDATABASE=saltcorn \
+  -e PGUSER=saltcorn \
+  -e PGPASSWORD=secretpassword \
+  -p 3000:3000 \
+  ghcr.io/productioncity/saltcorn:latest serve
+
+# 4. Visit http://localhost:3000 in your browser.
+
+# 5. Clean up when you’re done (containers + volume + network).
+docker stop saltcorn saltcorn-postgres
+docker rm   saltcorn saltcorn-postgres
+docker volume rm saltcorn-pgdata
+docker network rm saltcorn-net
+```
+
+---
+
+### 2️⃣ Super-quick demo (everything is **ephemeral** – no volume, `--rm` everywhere)
+
+```bash
+# ⚠️  Demo only – ALL data vanishes on exit
+docker network create saltcorn-net && \
+docker run --rm -d \
+  --name saltcorn-pg \
+  --network saltcorn-net \
+  -e POSTGRES_DB=saltcorn \
+  -e POSTGRES_USER=saltcorn \
+  -e POSTGRES_PASSWORD=secretpassword \
+  -p 5432:5432 \
+  postgres:17-alpine && \
+docker run --rm -it \
+  --name saltcorn \
+  --network saltcorn-net \
+  -e PGHOST=saltcorn-pg \
+  -e PGPORT=5432 \
+  -e PGDATABASE=saltcorn \
+  -e PGUSER=saltcorn \
+  -e PGPASSWORD=secretpassword \
+  -p 3000:3000 \
+  ghcr.io/productioncity/saltcorn:latest serve && \
+docker network rm saltcorn-net
+```
+
+Press **Ctrl-C** at any time – both containers die, the network is removed, and the world is clean again.
 
 ---
 
