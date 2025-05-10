@@ -14,8 +14,8 @@ FROM node:${NODE_BASE}
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    libpq-dev build-essential python-is-python3 postgresql-client \
-    git chromium libsystemd-dev gosu python3-venv zip unzip; \
+    build-essential chromium git gosu libpq-dev libsystemd-dev \
+    postgresql-client python-is-python3 python3-venv unzip zip; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
@@ -30,21 +30,21 @@ RUN npm config set install-strategy nested \
 # 3. Saltcorn directories – created *owned* by `node` (no later chown)
 # ────────────────────────────────────────────────────────────────────
 RUN install -d -o node -g node /saltcorn-cli
+COPY --chown=node:node fix /saltcorn-cli/fix
 
 # ────────────────────────────────────────────────────────────────────
 # 4. Install Saltcorn CLI as unprivileged user
 # ────────────────────────────────────────────────────────────────────
-ARG  SALTCORN_VERSION=1.2.0-beta.2
-ENV  SALTCORN_VERSION=${SALTCORN_VERSION}
-
-COPY --chown=node:node --chmod=644 patches /saltcorn-cli/patches
+ARG SALTCORN_VERSION=1.2.0-beta.2
+ENV SALTCORN_VERSION=${SALTCORN_VERSION}
 
 USER node
 WORKDIR /saltcorn-cli
 RUN npm init -y \
-    && npm install --save-dev patch-package postinstall-postinstall \
-    && node -e "const fs=require('fs');const p='./package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.scripts=j.scripts||{};j.scripts.postinstall=j.scripts.postinstall?j.scripts.postinstall.trim()+' && patch-package':'patch-package';fs.writeFileSync(p,JSON.stringify(j,null,2));" \
-    && npm install --install-strategy=nested --omit=dev "@saltcorn/cli@${SALTCORN_VERSION}"
+    && npm install --save-dev postinstall-postinstall \
+    && node -e 'const fs=require("fs");const pkg="package.json";const j=JSON.parse(fs.readFileSync(pkg,"utf8"));j.scripts=j.scripts||{};const cmd="cp -fR fix/buffer-equal-constant-time/* node_modules/@saltcorn/cli/node_modules/buffer-equal-constant-time/";j.scripts.postinstall=j.scripts.postinstall?j.scripts.postinstall+" && "+cmd:cmd;fs.writeFileSync(pkg,JSON.stringify(j,null,2));' \
+    && npm install --install-strategy=nested --omit=dev "@saltcorn/cli@${SALTCORN_VERSION}" \
+    && NODE_ENV=production npm i --omit=dev
 
 # ────────────────────────────────────────────────────────────────────
 # 5. Expose CLI globally (root required for /usr/local/bin)
