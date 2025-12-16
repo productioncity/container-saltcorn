@@ -146,22 +146,22 @@ Docker/Podman will auto-select the correct variant for your host.
 | 20-slim | 1.3.1 | `docker pull ghcr.io/productioncity/saltcorn:1.3.1-20-slim` | ✅ |
 | 20-slim | 1.4.0 | `docker pull ghcr.io/productioncity/saltcorn:1.4.0-20-slim` | ✅ |
 | 20-slim | 1.4.1 | `docker pull ghcr.io/productioncity/saltcorn:1.4.1-20-slim` | ✅ |
-| 20-slim | 1.5.0-beta.10 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.10-20-slim` | ✅ |
+| 20-slim | 1.5.0-beta.13 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.13-20-slim` | ✅ |
 | 22-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-22-slim` | ✅ |
 | 22-slim | 1.3.1 | `docker pull ghcr.io/productioncity/saltcorn:1.3.1-22-slim` | ✅ |
 | 22-slim | 1.4.0 | `docker pull ghcr.io/productioncity/saltcorn:1.4.0-22-slim` | ✅ |
 | 22-slim | 1.4.1 | `docker pull ghcr.io/productioncity/saltcorn:1.4.1-22-slim` | ✅ |
-| 22-slim | 1.5.0-beta.10 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.10-22-slim` | ✅ |
+| 22-slim | 1.5.0-beta.13 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.13-22-slim` | ✅ |
 | 23-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-23-slim` | ✅ |
 | 23-slim | 1.3.1 | `docker pull ghcr.io/productioncity/saltcorn:1.3.1-23-slim` | ✅ |
 | 23-slim | 1.4.0 | `docker pull ghcr.io/productioncity/saltcorn:1.4.0-23-slim` | ✅ |
 | 23-slim | 1.4.1 | `docker pull ghcr.io/productioncity/saltcorn:1.4.1-23-slim` | ✅ |
-| 23-slim | 1.5.0-beta.10 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.10-23-slim` | ✅ |
+| 23-slim | 1.5.0-beta.13 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.13-23-slim` | ✅ |
 | 24-slim | 1.0.0 | `docker pull ghcr.io/productioncity/saltcorn:1.0.0-24-slim` | ✅ |
 | 24-slim | 1.3.1 | `docker pull ghcr.io/productioncity/saltcorn:1.3.1-24-slim` | ✅ |
 | 24-slim | 1.4.0 | `docker pull ghcr.io/productioncity/saltcorn:1.4.0-24-slim` | ✅ |
 | 24-slim | 1.4.1 | `docker pull ghcr.io/productioncity/saltcorn:1.4.1-24-slim` | ✅ |
-| 24-slim | 1.5.0-beta.10 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.10-24-slim` | ✅ |
+| 24-slim | 1.5.0-beta.13 | `docker pull ghcr.io/productioncity/saltcorn:1.5.0-beta.13-24-slim` | ✅ |
 ## 📑 Tag Cheat-Sheet
 
 | Tag | Means | Example |
